@@ -32,10 +32,8 @@ pids
 .DS_Store
 .vscode/
 .idea/
-/src/generated/prisma
 
 ref
-/prisma/src/generated/prisma
 Dockerfile
 .git
 .gitignore
