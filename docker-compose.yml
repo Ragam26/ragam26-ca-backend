@@ -1,0 +1,46 @@
+services:
+  # --- PostgreSQL Database ---
+  ca_db:
+    image: postgres:16-alpine
+    container_name: ca_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      # Docker-managed volume for database data
+      - ca_db_data:/var/lib/postgresql/data
+    networks:
+      - ca_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Express Backend ---
+  ca_backend:
+    container_name: ca_express_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      ca_db:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - /home/ragam/mounts/ragam26-ca-backend:/app/public/
+    networks:
+      - ca_network
+
+networks:
+  ca_network:
+    driver: bridge
+
+volumes:
+  ca_db_data:

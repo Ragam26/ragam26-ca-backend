@@ -36,3 +36,7 @@ pids
 
 ref
 /prisma/src/generated/prisma
+Dockerfile
+.git
+.gitignore
+docker-compose.yml
