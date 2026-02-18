@@ -8,7 +8,7 @@ import '../config/passport.config.js';
 const authRouter = Router();
 const prisma = new PrismaClient();
 
-authRouter.post(
+authRouter.get(
   "/login",
   passport.authenticate('google', { scope: ["profile", "email"] })
 );
