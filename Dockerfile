@@ -11,13 +11,10 @@ COPY package*.json ./
 # Install ALL dependencies (crucial: this installs typescript and @types/express)
 RUN npm install
 
-# Copy Prisma schema and generate the client
-# (Must happen before building the TS code so your types match the DB)
-COPY prisma ./prisma
-RUN npx prisma generate
-
 # Copy the rest of your application code
 COPY . .
+
+RUN npx prisma generate
 
 # Compile the TypeScript code into JavaScript
 RUN npm run build
