@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  CA
+}
+
+model User {
+  userId              Int       @id @default(autoincrement()) @map("user_id")
+  email               String    @unique
+  phoneNo             String?   @unique @map("phone_no")
+  name                String?
+  collegeName         String?   @map("college_name")
+  yearOfStudy         Int?      @map("year_of_study") 
+  district            String?   
+  referralCode        String?   @unique @map("referral_code")
+  role                Role      @default(CA)
+  isProfileComplete   Boolean   @default(false) @map("is_profile_complete")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  sessions            Session[]
+
+  @@map("users")
+}
+
+model Session {
+  sessionId     Int      @id @default(autoincrement()) @map("session_id")
+  userId        Int      @map("user_id")
+  refreshToken  String   @unique @map("refresh_token")
+  createdAt     DateTime @default(now()) @map("created_at")
+  expiresAt     DateTime @map("expires_at")
+
+  // Relation setup: If a user is deleted, their sessions are wiped automatically
+  user          User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("sessions")
+}
