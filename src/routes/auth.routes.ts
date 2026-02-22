@@ -63,7 +63,7 @@ authRouter.get(
                 maxAge: 14 * 24 * 60 * 60 * 1000 // 14 days
             });
 
-            return res.redirect(`${process.env.FRONTEND_URL}/api/auth/login-success?token=${authtoken}`);
+            return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${authtoken}`);
         })(req, res, next);
     }
 )
