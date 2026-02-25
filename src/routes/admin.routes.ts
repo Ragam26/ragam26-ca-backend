@@ -8,7 +8,7 @@ const adminRouter = Router();
 const prisma = new PrismaClient();
 
 const getCASchema = z.object({
-    verified: z.boolean().optional().default(false),
+    verified: z.coerce.boolean().default(false)
 })
 
 type getCAQuery = z.infer<typeof getCASchema>;
@@ -22,9 +22,9 @@ adminRouter.post(
             return res.status(403).send('Forbidden');
         }
 
-        const queryParsed: getCAQuery = getCASchema.parse(req.query);
-
+        
         try {
+            const queryParsed: getCAQuery = getCASchema.parse(req.query);
             const cas = await prisma.user.findMany({
                 where: {
                     role: "CA",
