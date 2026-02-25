@@ -13,7 +13,7 @@ const getCASchema = z.object({
 
 type getCAQuery = z.infer<typeof getCASchema>;
 
-adminRouter.get(
+adminRouter.post(
     "/get-ca",
     authenticator,
     async (req: Request, res: Response) => {
@@ -31,8 +31,14 @@ adminRouter.get(
                     isProfileComplete: queryParsed.verified
                 },
                 select: {
-                    createdAt: false,
-                    updatedAt: false
+                    userId: true,
+                    name: true,
+                    email: true,
+                    phoneNo: true,
+                    collegeName: true,
+                    yearOfStudy: true,
+                    district: true,
+                    isProfileComplete: true,
                 }
             })
             res.json(cas);
