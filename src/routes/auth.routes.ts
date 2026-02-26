@@ -112,6 +112,7 @@ authRouter.post("/refresh", (req: Request, res: Response) => {
                             phoneNo: true,
                             role: true,
                             isProfileComplete: true,
+                            gPayNumber: true,
                         }
                     }
                 }

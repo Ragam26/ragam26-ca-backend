@@ -28,6 +28,7 @@ model User {
   yearOfStudy         Int?      @map("year_of_study") 
   district            String?   
   referralCode        String?   @unique @map("referral_code")
+  gPayNumber          String?   @map("gpay_number")
   role                Role      @default(CA)
   isProfileComplete   Boolean   @default(false) @map("is_profile_complete")
   createdAt           DateTime  @default(now()) @map("created_at")

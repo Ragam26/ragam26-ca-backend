@@ -39,6 +39,7 @@ adminRouter.post(
                     yearOfStudy: true,
                     district: true,
                     isProfileComplete: true,
+                    gPayNumber: true,
                 }
             })
             res.json(cas);

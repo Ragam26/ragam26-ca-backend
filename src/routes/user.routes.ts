@@ -24,7 +24,8 @@ const ProfileUpdateSchema = z.object({
     phoneNo: z.string().regex(/^\d{10}$/, "Phone number must be 10 digits").optional(),
     collegeName: z.string().optional(),
     yearOfStudy: z.number().int().min(1).max(6).optional(),
-    district: z.string().optional()
+    district: z.string().optional(),
+    gPayNumber: z.string().regex(/^\d{10}$/, "GPay number must be 10 digits").optional(),
 })
 
 type ProfileUpdateInput = z.infer<typeof ProfileUpdateSchema>;
@@ -44,6 +45,7 @@ userRouter.post(
                     collegeName: bodyParsed.collegeName,
                     yearOfStudy: bodyParsed.yearOfStudy,
                     district: bodyParsed.district,
+                    gPayNumber: bodyParsed.gPayNumber,
                 }
             })
             console.debug('User profile updated:', updatedUser.name);
