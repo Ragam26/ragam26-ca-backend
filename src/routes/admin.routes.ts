@@ -8,8 +8,12 @@ const adminRouter = Router();
 const prisma = new PrismaClient();
 
 const getCASchema = z.object({
-    verified: z.coerce.boolean().default(false)
-})
+    verified: z
+    .string()
+    .optional()
+    .transform((val) => val === "true")
+    .default(false),
+});
 
 type getCAQuery = z.infer<typeof getCASchema>;
 
@@ -40,6 +44,7 @@ adminRouter.post(
                     district: true,
                     isProfileComplete: true,
                     gPayNumber: true,
+                    createdAt: true,
                 }
             })
             res.json(cas);
