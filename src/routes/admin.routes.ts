@@ -33,18 +33,6 @@ adminRouter.post(
                 where: {
                     role: "CA",
                     ...(queryParsed.verified ? { verified: true } : {}),
-                },
-                select: {
-                    userId: true,
-                    name: true,
-                    email: true,
-                    phoneNo: true,
-                    collegeName: true,
-                    yearOfStudy: true,
-                    district: true,
-                    isProfileComplete: true,
-                    gPayNumber: true,
-                    createdAt: true,
                 }
             })
             res.json(cas);
