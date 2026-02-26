@@ -32,7 +32,7 @@ adminRouter.post(
             const cas = await prisma.user.findMany({
                 where: {
                     role: "CA",
-                    ...(queryParsed.verified ? { verified: true } : {}),
+                    ...(queryParsed.verified ? { isProfileComplete: true } : {}),
                 }
             })
             res.json(cas);
