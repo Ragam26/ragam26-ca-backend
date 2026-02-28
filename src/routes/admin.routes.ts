@@ -116,7 +116,10 @@ adminRouter.post("/update-referral", authenticator, async (req: Request, res: Re
 //------
 
 //CSV-PROCESSING
-adminRouter.post("/process-csvs", async (req: Request, res: Response) => {
+adminRouter.post("/process-csvs", authenticator, async (req: Request, res: Response) => {
+    if (req.user.role !== "admin") {
+        return res.status(403).send('Forbidden');
+    }
     try {
         const { processReferralCSVs } = await import("../services/referral.service.js");
         const csvDir = path.join(process.cwd(), 'data', 'csv');

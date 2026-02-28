@@ -128,7 +128,7 @@ export async function processReferralCSVs(csvDirectory: string) {
 
     console.log(`Inserted ${referralsToInsert.length} valid referrals`);
 
-    // Update metadata with the new count (total records in the file)
+    // Update metadata with the new count (total records in the file) (upsert update if entry present else create)
     await prisma.processingMetadata.upsert({
       where: { fileName: file },
       update: { lastProcessedLine: records.length, updatedAt: new Date() },
