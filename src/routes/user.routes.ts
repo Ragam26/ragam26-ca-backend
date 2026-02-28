@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import passport from "passport";
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "../generated/client.js";
 import authenticator from "../middlewares/auth.middleware.js";
 import '../config/passport.config.js';
 import * as z from "zod";
@@ -34,9 +34,9 @@ userRouter.post(
     "/profile",
     authenticator,
     async (req: Request, res: Response) => {
-        try{
+        try {
             const bodyParsed: ProfileUpdateInput = ProfileUpdateSchema.parse(req.body);
-            
+
             let updatedUser = await prisma.user.update({
                 where: { email: req.user.email },
                 data: {
@@ -50,7 +50,7 @@ userRouter.post(
             })
             console.debug('User profile updated:', updatedUser.name);
 
-            if(updatedUser.name && updatedUser.phoneNo && updatedUser.collegeName && updatedUser.yearOfStudy && updatedUser.district) {
+            if (updatedUser.name && updatedUser.phoneNo && updatedUser.collegeName && updatedUser.yearOfStudy && updatedUser.district) {
                 updatedUser = await prisma.user.update({
                     where: { email: req.user.email },
                     data: {
@@ -61,7 +61,7 @@ userRouter.post(
             };
 
             return res.status(200).json(updatedUser);
-        } catch(error) {
+        } catch (error) {
             if (error instanceof z.ZodError) {
                 console.error('Validation error:', error);
                 return res.status(400).json({ message: "Validation Error", errors: error });

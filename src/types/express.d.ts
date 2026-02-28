@@ -1,4 +1,4 @@
-import { Role } from '../generated/prisma/enums.js';
+import { Role } from '@prisma/client';
 
 declare global {
   namespace Express {
@@ -13,7 +13,15 @@ declare global {
       role: Role;
       isProfileComplete: boolean;
     }
+    interface Referral {
+      referralId: number;
+      referralCode: string;
+      ragamId: string | null;
+      eventName: string;
+      isPaid: boolean;
+      user: User | null;
+    }
   }
 }
 
-export {};
+export { };
