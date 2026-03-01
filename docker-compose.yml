@@ -35,7 +35,6 @@ services:
       - "3000:3000"
     volumes:
       - /home/ragam/mounts/ragam26-ca-backend:/app/public/
-      - ./data/csv:/app/data/csv
       - ./prisma/migrations:/app/prisma/migrations
     networks:
       - ca_network
