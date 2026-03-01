@@ -14,6 +14,8 @@ RUN npm install
 # Copy the rest of your application code
 COPY . .
 
+RUN mkdir -p public/uploads/pending public/uploads/approved public/uploads/rejected
+
 RUN npx prisma generate
 
 # Compile the TypeScript code into JavaScript
