@@ -1,7 +1,7 @@
 import passport, { Profile } from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
-import { PrismaClient } from "../generated/client.js";
+import { PrismaClient } from "../generated/prisma/client.js";
 import 'dotenv/config';
 
 const prisma = new PrismaClient();

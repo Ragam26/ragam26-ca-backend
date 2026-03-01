@@ -1,9 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../generated/client.js";
+import { PrismaClient } from "../generated/prisma/client.js";
 import authenticator from "../middlewares/auth.middleware.js";
 import '../config/passport.config.js';
 import * as z from 'zod';
-import path from "path";
 import { csvUpload } from "../middlewares/multer.middleware.js";
 import { processReferralCSVs } from "../services/referral.service.js";
 
@@ -13,10 +12,10 @@ const prisma = new PrismaClient();
 
 const getCASchema = z.object({
     verified: z
-        .string()
-        .optional()
-        .transform((val) => val === "true")
-        .default(false),
+    .string()
+    .optional()
+    .transform((val) => val === "true")
+    .default(false),
 });
 
 type getCAQuery = z.infer<typeof getCASchema>;
@@ -30,7 +29,6 @@ adminRouter.post(
         if (req.user.role !== "admin") {
             return res.status(403).send('Forbidden');
         }
-
 
         try {
             const queryParsed: getCAQuery = getCASchema.parse(req.query);
@@ -47,7 +45,6 @@ adminRouter.post(
         }
     }
 );
-//------
 
 //EVENT-REFERRALS
 adminRouter.get("/get-referrals", authenticator, async (req: Request, res: Response) => {

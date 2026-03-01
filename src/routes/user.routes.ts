@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import passport from "passport";
-import { PrismaClient } from "../generated/client.js";
+import { PrismaClient } from "../generated/prisma/client.js";
 import authenticator from "../middlewares/auth.middleware.js";
 import '../config/passport.config.js';
 import * as z from "zod";
