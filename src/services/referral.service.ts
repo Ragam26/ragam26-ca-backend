@@ -6,23 +6,15 @@ import path from "path";
 const prisma = new PrismaClient();
 
 /**
- * Processes CSV files in a directory.
+ * Processes CSV files provided as buffers (from memory storage).
  * Each file name (without extension) is treated as the eventName.
  * It uses the ProcessingMetadata table to track exactly which lines were processed.
- * This ensures that even if some rows are skipped, we know where to resume.
  */
-export async function processReferralCSVs(csvDirectory: string) {
-  if (!fs.existsSync(csvDirectory)) {
-    console.error(`Directory not found: ${csvDirectory}`);
-    return;
-  }
-
-  const files = fs.readdirSync(csvDirectory).filter(f => f.endsWith('.csv'));
-
-  for (const file of files) {
-    const filePath = path.join(csvDirectory, file);
-    const eventName = path.parse(file).name;
-    const content = fs.readFileSync(filePath, 'utf-8');
+export async function processReferralCSVs(files: any[]) {
+  for (const fileItem of files) {
+    const fileName = fileItem.originalname;
+    const eventName = fileName.split(".")[0];
+    const content = fileItem.buffer.toString('utf-8');
 
     // Parse CSV
     const records = parse(content, {
@@ -33,20 +25,16 @@ export async function processReferralCSVs(csvDirectory: string) {
 
     // Get the last processed line index for this specific file
     const metadata = await prisma.processingMetadata.findUnique({
-      where: { fileName: file }
+      where: { fileName: fileName }
     });
 
     const startIndex = metadata?.lastProcessedLine || 0;
     const newRecords = records.slice(startIndex);
 
     if (newRecords.length === 0) {
-      console.log(`No new records for file: ${file}`);
+      console.log(`No new records for file: ${fileName}`);
       continue;
     }
-
-    // console.log(`Processing ${newRecords.length} new records from ${file} for event ${eventName}`);
-
-    // console.log(`New records for event ${eventName}:`, JSON.stringify(newRecords, null, 2));
 
     //------Processing the CSV file------
 
@@ -65,12 +53,16 @@ export async function processReferralCSVs(csvDirectory: string) {
 
     const uniqueReferralCodes = [...new Set(referralCodes)];
 
+    // console.log(uniqueReferralCodes);
+
     const users = await prisma.user.findMany({
       where: {
         phoneNo: { in: uniqueReferralCodes }
       },
       select: { phoneNo: true }
     });
+
+    // console.log(users);
 
     const validReferralSet = new Set(users.map(u => u.phoneNo));
 
@@ -128,11 +120,13 @@ export async function processReferralCSVs(csvDirectory: string) {
 
     console.log(`Inserted ${referralsToInsert.length} valid referrals`);
 
-    // Update metadata with the new count (total records in the file) (upsert update if entry present else create)
+    // Update metadata with the new count
     await prisma.processingMetadata.upsert({
-      where: { fileName: file },
+      where: { fileName: fileName },
       update: { lastProcessedLine: records.length, updatedAt: new Date() },
-      create: { fileName: file, lastProcessedLine: records.length, updatedAt: new Date() }
+      create: { fileName: fileName, lastProcessedLine: records.length, updatedAt: new Date() }
     });
+
+    console.log(`Successfully processed memory-buffer file: ${fileName}`);
   }
 }
