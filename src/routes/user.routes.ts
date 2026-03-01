@@ -1,6 +1,4 @@
 import { Router, Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import passport from "passport";
 import { PrismaClient } from "../generated/prisma/client.js";
 import authenticator from "../middlewares/auth.middleware.js";
 import '../config/passport.config.js';
@@ -71,5 +69,22 @@ userRouter.post(
         }
     }
 )
+
+userRouter.get("/leaderboard", async (req: Request, res: Response) => {
+    const leaders = await prisma.user.findMany({
+        where: {
+            role: "CA"
+        },
+        orderBy: {
+            points: "desc",
+        },
+        select: {
+            name: true,
+            points: true,
+        },
+        take: 20
+    })
+    return res.json(leaders);
+})
 
 export default userRouter;

@@ -12,6 +12,8 @@ export function createServer() {
     app.use(cookieParser());
     app.use(passport.initialize());
 
+    app.use("/public", express.static("public"));
+
     app.get("/", (req, res) => {
         res.send("Hello, World!");
     });

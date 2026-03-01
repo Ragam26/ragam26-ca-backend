@@ -19,6 +19,18 @@ enum Role {
   CA
 }
 
+enum UploadStatus {
+  pending
+  approved
+  rejected
+}
+
+enum Category {
+  poster
+  whatsapp
+  instagram
+}
+
 model User {
   userId              Int       @id @default(autoincrement()) @map("user_id")
   email               String    @unique
@@ -31,10 +43,13 @@ model User {
   gPayNumber          String?   @map("gpay_number")
   role                Role      @default(CA)
   isProfileComplete   Boolean   @default(false) @map("is_profile_complete")
+  points              Int       @default(0)
+  storageUsage        Int       @default(0) @map("storage_usage") // in bytes
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   sessions            Session[]
+  uploads             Upload[]
 
   @@map("users")
 }
@@ -50,4 +65,18 @@ model Session {
   user          User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+model Upload {
+  uploadId   Int          @id @default(autoincrement()) @map("upload_id")
+  userId     Int          @map("user_id")
+  filePath   String?       @map("file_path")
+  category   String
+  status     UploadStatus @default(pending)
+  fileSize   Int          @map("file_size") // helps in subtracting if deleted
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  user       User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("uploads")
 }
