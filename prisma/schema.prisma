@@ -50,6 +50,7 @@ model User {
 
   sessions            Session[]
   uploads             Upload[]
+  referrals           Referral[]
 
   @@map("users")
 }
@@ -79,4 +80,26 @@ model Upload {
   user       User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("uploads")
+}
+
+model Referral {
+  referralId   Int      @id @default(autoincrement()) @map("referral_id")
+  name         String?  @map("name")
+  collegeName  String?  @map("college_name")
+  referralCode String?  @map("referral_code")
+  eventName    String   @map("event_name")
+  isPaid       Boolean  @default(false) @map("is_paid")
+  registeredAt DateTime @default(now()) @map("registered_at")
+  user         User?    @relation(fields: [referralCode], references: [phoneNo])
+
+  @@map("referrals")
+}
+
+model ProcessingMetadata {
+  id                Int      @id @default(autoincrement())
+  fileName          String   @unique @map("file_name")
+  lastProcessedLine Int      @default(0) @map("last_processed_line")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("processing_metadata")
 }
