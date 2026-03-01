@@ -12,8 +12,7 @@ const prisma = new PrismaClient();
 
 uploadsRouter.use(fileUpload({
   preserveExtension: true,
-  abortOnLimit: true,
-  responseOnLimit: 'File is too big. Max size is 1.5MB',
+  abortOnLimit: false,
   limits: { fileSize: 1.5 * 1024 * 1024 } // 1.5MB
 }));
 
@@ -52,45 +51,61 @@ uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
   const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/webp'];
 
   try {
+    const savedFiles: any = [];
+    const failedFiles: any = [];
+
     for (const key in req.files) {
       const files = Array.isArray(req.files[key]) ? req.files[key] : [req.files[key]];
-  
-      const file = files[0]; // Only process the first file
-      if (!allowedExtensions.includes(path.extname(file.name).toLowerCase())) {
-        return res.status(400).send({ msg: 'Invalid file extension' });
-      }
-      if (!allowedMimeTypes.includes(file.mimetype)) {
-        return res.status(400).send({ msg: 'Invalid file type' });
+      if(files.length > 3) {
+        return res.status(400).send({ msg: 'You can upload a maximum of 3 files at once.' });
       }
 
-      const uploadPath = path.join(uploadDir, `${req.user.userId}_${Date.now()}_${file.name}`);
-      file.mv(uploadPath, async (err) => {
-        if (err) {
-          console.error('File upload error:', err);
-          return res.status(500).send({ msg: 'File upload failed.' });
+      
+      files.forEach(file => {
+        if (!allowedExtensions.includes(path.extname(file.name).toLowerCase())) {
+          failedFiles.push({ name: file.name, reason: 'Invalid file extension' });
+          return;
         }
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          failedFiles.push({ name: file.name, reason: 'Invalid file type' });
+          return;
+        }
+        if(file.truncated) {
+          failedFiles.push({ name: file.name, reason: 'File size exceeds limit' });
+          return;
+        }
+  
+        const uploadPath = path.join(uploadDir, `${req.user.userId}_${Date.now()}_${file.name}`);
+        file.mv(uploadPath, async (err) => {
+          if (err) {
+            console.error('File upload error:', err);
+            return res.status(500).send({ msg: 'File upload failed.' });
+          }
+  
+          await prisma.$transaction([
+            prisma.upload.create({
+              data: {
+                userId: req.user.userId,
+                filePath: uploadPath,
+                category: parsedBody.data.category,
+                fileSize: file.size,
+              }
+            }),
+            prisma.user.update({
+              where: { userId: req.user.userId },
+              data: {
+                storageUsage: { increment: file.size }
+              }
+            })
+          ])
+  
+        });
 
-        await prisma.$transaction([
-          prisma.upload.create({
-            data: {
-              userId: req.user.userId,
-              filePath: uploadPath,
-              category: parsedBody.data.category,
-              fileSize: file.size,
-            }
-          }),
-          prisma.user.update({
-            where: { userId: req.user.userId },
-            data: {
-              storageUsage: { increment: file.size }
-            }
-          })
-        ])
-
-      });
+        savedFiles.push({ name: file.name, path: uploadPath });
+      })
     }
 
-    return res.send({ msg: 'File(s) uploaded successfully.' });
+    return res.send({ savedFiles, failedFiles });
 
   } catch (err) {
     if ((err as any).code === 'ENOENT') {
