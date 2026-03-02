@@ -9,8 +9,8 @@ const authRouter = Router();
 const prisma = new PrismaClient();
 
 authRouter.get(
-  "/login",
-  passport.authenticate('google', { scope: ["profile", "email"] })
+    "/login",
+    passport.authenticate('google', { scope: ["profile", "email"] })
 );
 
 authRouter.get(
@@ -22,7 +22,7 @@ authRouter.get(
                 return res.redirect(`${process.env.FRONTEND_URL}/api/auth/login-failure`);
             }
 
-            const payload:Express.User = user;
+            const payload: Express.User = user;
 
             console.log('Authenticated user payload:', payload);
 
@@ -43,7 +43,7 @@ authRouter.get(
                 { expiresIn: '14d' }
             )
 
-            try{
+            try {
                 const createRefreshToken = await prisma.session.create({
                     data: {
                         userId: payload.userId,
@@ -61,7 +61,7 @@ authRouter.get(
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days,
-                domain: process.env.NODE_ENV === 'production' ? '.ragam.co.in' : `${process.env.BACKEND_URL}`,
+                domain: process.env.NODE_ENV === 'production' ? '.ragam.co.in' : `localhost`,
             });
 
             return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${authtoken}`);
@@ -113,6 +113,7 @@ authRouter.post("/refresh", (req: Request, res: Response) => {
                             role: true,
                             isProfileComplete: true,
                             gPayNumber: true,
+                            points: true,
                         }
                     }
                 }
@@ -128,6 +129,8 @@ authRouter.post("/refresh", (req: Request, res: Response) => {
                     email: session.user.email,
                     role: session.user.role,
                     isProfileComplete: session.user.isProfileComplete,
+                    phoneNo: session.user.phoneNo,
+                    points: session.user.points,
                 },
                 process.env.JWT_SECRET!,
                 { expiresIn: '1h' }
@@ -181,6 +184,8 @@ authRouter.post("/verify", authenticator, (req: Request, res: Response) => {
             email: req.user?.email,
             role: req.user?.role,
             isProfileComplete: req.user?.isProfileComplete,
+            phoneNo: req.user?.phoneNo,
+            points: req.user?.points,
         }
     });
 });

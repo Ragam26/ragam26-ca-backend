@@ -32,27 +32,29 @@ passport.use(
             district: true,
             role: true,
             isProfileComplete: true,
+            points: true,
           }
         });
 
         if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    email,
-                    name: profile.displayName,
-                },
-                select: {
-                    userId: true,
-                    email: true,
-                    name: true,
-                    collegeName: true,
-                    phoneNo: true,
-                    yearOfStudy: true,
-                    district: true,
-                    role: true,
-                    isProfileComplete: true,
-                }
-            })
+          user = await prisma.user.create({
+            data: {
+              email,
+              name: profile.displayName,
+            },
+            select: {
+              userId: true,
+              email: true,
+              name: true,
+              collegeName: true,
+              phoneNo: true,
+              yearOfStudy: true,
+              district: true,
+              role: true,
+              isProfileComplete: true,
+              points: true,
+            }
+          })
         }
 
         console.debug('Authenticated user:', user);
@@ -65,36 +67,37 @@ passport.use(
 );
 
 passport.use(
-    new JwtStrategy(
-        {
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            secretOrKey: process.env.JWT_SECRET!,
-        },
-        async (jwtPayload, done) => {
-            try {
-                const user = await prisma.user.findUnique({
-                    where: { email: jwtPayload.email },
-                    select: {
-                        userId: true,
-                        email: true,
-                        name: true,
-                        collegeName: true,
-                        phoneNo: true,
-                        yearOfStudy: true,
-                        district: true,
-                        role: true,
-                        isProfileComplete: true,
-                    }
-                });
+  new JwtStrategy(
+    {
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: process.env.JWT_SECRET!,
+    },
+    async (jwtPayload, done) => {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { email: jwtPayload.email },
+          select: {
+            userId: true,
+            email: true,
+            name: true,
+            collegeName: true,
+            phoneNo: true,
+            yearOfStudy: true,
+            district: true,
+            role: true,
+            isProfileComplete: true,
+            points: true,
+          }
+        });
 
-                if (!user) {
-                    return done(null, false);
-                }
-
-                return done(null, user);
-            } catch (error) {
-                return done(error as Error, undefined);
-            }
+        if (!user) {
+          return done(null, false);
         }
-    )
+
+        return done(null, user);
+      } catch (error) {
+        return done(error as Error, undefined);
+      }
+    }
+  )
 );

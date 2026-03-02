@@ -32,9 +32,9 @@ userRouter.post(
     "/profile",
     authenticator,
     async (req: Request, res: Response) => {
-        try{
+        try {
             const bodyParsed: ProfileUpdateInput = ProfileUpdateSchema.parse(req.body);
-            
+
             let updatedUser = await prisma.user.update({
                 where: { email: req.user.email },
                 data: {
@@ -48,7 +48,7 @@ userRouter.post(
             })
             console.debug('User profile updated:', updatedUser.name);
 
-            if(updatedUser.name && updatedUser.phoneNo && updatedUser.collegeName && updatedUser.yearOfStudy && updatedUser.district) {
+            if (updatedUser.name && updatedUser.phoneNo && updatedUser.collegeName && updatedUser.yearOfStudy && updatedUser.district) {
                 updatedUser = await prisma.user.update({
                     where: { email: req.user.email },
                     data: {
@@ -59,7 +59,7 @@ userRouter.post(
             };
 
             return res.status(200).json(updatedUser);
-        } catch(error) {
+        } catch (error) {
             if (error instanceof z.ZodError) {
                 console.error('Validation error:', error);
                 return res.status(400).json({ message: "Validation Error", errors: error });

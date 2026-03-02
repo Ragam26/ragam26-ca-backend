@@ -12,8 +12,9 @@ declare global {
       district: string | null;
       role: Role;
       isProfileComplete: boolean;
+      points: number;
     }
   }
 }
 
-export {};
+export { };

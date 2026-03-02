@@ -56,7 +56,7 @@ uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
 
     for (const key in req.files) {
       const files = Array.isArray(req.files[key]) ? req.files[key] : [req.files[key]];
-      
+
       files.forEach(file => {
         if (!allowedExtensions.includes(path.extname(file.name).toLowerCase())) {
           failedFiles.push({ name: file.name, reason: 'Invalid file extension' });
@@ -66,22 +66,22 @@ uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
           failedFiles.push({ name: file.name, reason: 'Invalid file type' });
           return;
         }
-        if(file.truncated) {
+        if (file.truncated) {
           failedFiles.push({ name: file.name, reason: 'File size exceeds limit' });
           return;
         }
-        if(savedFiles.length + failedFiles.length >= 3) {
+        if (savedFiles.length + failedFiles.length >= 3) {
           failedFiles.push({ name: file.name, reason: 'Maximum file upload limit reached' });
           return;
         }
-  
+
         const uploadPath = path.join(uploadDir, `${req.user.userId}_${Date.now()}_${file.name}`);
         file.mv(uploadPath, async (err) => {
           if (err) {
             console.error('File upload error:', err);
             return res.status(500).send({ msg: 'File upload failed.' });
           }
-  
+
           await prisma.$transaction([
             prisma.upload.create({
               data: {
@@ -98,7 +98,7 @@ uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
               }
             })
           ])
-  
+
         });
 
         savedFiles.push({ name: file.name, path: uploadPath });
@@ -193,13 +193,13 @@ uploadsRouter.put("/:uploadId", authenticator, async (req: Request, res: Respons
       return res.status(404).send({ msg: "Upload not found" });
     }
 
-    if(upload.status !== "pending") {
+    if (upload.status !== "pending") {
       return res.status(400).send({ msg: "Only pending uploads can be approved/rejected" });
     }
     const oldPath = upload.filePath;
-    
-    if(newStatus === "approved") {
-      if(parsedBody.data.points < 0) {
+
+    if (newStatus === "approved") {
+      if (parsedBody.data.points < 0) {
         return res.status(400).send({ msg: "Points must be provided and non-negative when approving an upload" });
       }
       const newPath = path.join(newDir, path.basename(oldPath));
