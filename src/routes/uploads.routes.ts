@@ -56,10 +56,6 @@ uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
 
     for (const key in req.files) {
       const files = Array.isArray(req.files[key]) ? req.files[key] : [req.files[key]];
-      if(files.length > 3) {
-        return res.status(400).send({ msg: 'You can upload a maximum of 3 files at once.' });
-      }
-
       
       files.forEach(file => {
         if (!allowedExtensions.includes(path.extname(file.name).toLowerCase())) {
@@ -72,6 +68,10 @@ uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
         }
         if(file.truncated) {
           failedFiles.push({ name: file.name, reason: 'File size exceeds limit' });
+          return;
+        }
+        if(savedFiles.length + failedFiles.length >= 3) {
+          failedFiles.push({ name: file.name, reason: 'Maximum file upload limit reached' });
           return;
         }
   
