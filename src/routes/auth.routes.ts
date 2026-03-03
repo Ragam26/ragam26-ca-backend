@@ -32,6 +32,7 @@ authRouter.get(
                     email: payload.email,
                     role: payload.role,
                     isProfileComplete: payload.isProfileComplete,
+                    points: payload.points,
                 },
                 process.env.JWT_SECRET!,
                 { expiresIn: '1h' }
@@ -178,6 +179,7 @@ authRouter.post("/logout", async (req: Request, res: Response) => {
 });
 
 authRouter.post("/verify", authenticator, (req: Request, res: Response) => {
+    
     res.json({
         message: "Verification Successful",
         user: {
