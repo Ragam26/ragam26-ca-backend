@@ -17,7 +17,9 @@ uploadsRouter.use(fileUpload({
 }));
 
 const userUploadSchema = z.object({
-  category: z.enum(["poster", "whatsapp", "instagram"])
+  category: z.enum(["poster", "whatsapp", "instagram"]),
+  description: z.string().optional(),
+  title: z.string().optional(),
 })
 
 uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
@@ -88,13 +90,15 @@ uploadsRouter.post("/", authenticator, async (req: Request, res: Response) => {
                 userId: req.user.userId,
                 filePath: uploadPath,
                 category: parsedBody.data.category,
+                description: parsedBody.data.description,
+                title: parsedBody.data.title,
                 fileSize: file.size,
               }
             }),
             prisma.user.update({
               where: { userId: req.user.userId },
               data: {
-                storageUsage: { increment: file.size }
+                storageUsage: { increment: req.user.role === "CA" ? file.size : 0 }
               }
             })
           ])
@@ -142,7 +146,7 @@ uploadsRouter.get("/", authenticator, async (req: Request, res: Response) => {
 
   const uploads = await prisma.upload.findMany({
     where: {
-      ...(req.user.role === "CA" ? { userId: req.user.userId } : {}),
+      ...(req.user.role === "CA" && parsedQuery.data.category !== "poster" ? { userId: req.user.userId } : {}),
       ...(parsedQuery.data.category ? { category: parsedQuery.data.category } : {}),
       ...(parsedQuery.data.status ? { status: parsedQuery.data.status } : {}),
       ...(parsedQuery.data.uploadId ? { uploadId: parsedQuery.data.uploadId } : {}),
@@ -155,6 +159,7 @@ uploadsRouter.get("/", authenticator, async (req: Request, res: Response) => {
       status: true,
       fileSize: true,
       createdAt: true,
+      description: parsedQuery.data.category === "poster" ? true : false,
       user: req.user.role === "admin" ? true : { select: { name: true } }
     },
     orderBy: { createdAt: "desc" }
