@@ -160,6 +160,7 @@ uploadsRouter.get("/", authenticator, async (req: Request, res: Response) => {
       fileSize: true,
       createdAt: true,
       description: parsedQuery.data.category === "poster" ? true : false,
+      title: parsedQuery.data.category === "poster" ? true : false,
       user: req.user.role === "admin" ? true : { select: { name: true } }
     },
     orderBy: { createdAt: "desc" }
