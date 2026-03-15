@@ -60,6 +60,17 @@ adminRouter.get("/get-referrals", authenticator, async (req: Request, res: Respo
                         isPaid: false
                     }
                 }
+            },
+            include: {
+                _count: {
+                    select: {
+                        referrals: {
+                            where: {
+                                isPaid: false
+                            }
+                        }
+                    }
+                }
             }
         });
         res.json(usersWithReferrals);
