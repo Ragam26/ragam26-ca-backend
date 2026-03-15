@@ -97,68 +97,108 @@
             const readFile = (file) => new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
-                // Only read the first 2KB to be lightning fast for giant CSVs
-                const blob = file.slice(0, 2048);
-                reader.readAsText(blob);
+                // Read the whole file so we can check every row's referral code
+                reader.readAsText(file);
             });
+
+            // Tiny robust CSV row parser to handle internal commas inside quotes safely
+            const parseCSVRow = (str) => {
+                let result = [];
+                let insideQuote = false;
+                let cur = "";
+                for (let i = 0; i < str.length; i++) {
+                    if (str[i] === '"') insideQuote = !insideQuote;
+                    else if (str[i] === ',' && !insideQuote) {
+                        result.push(cur.trim());
+                        cur = "";
+                    } else cur += str[i];
+                }
+                result.push(cur.trim());
+                return result.map(s => s.replace(/^"|"$/g, '').trim());
+            };
 
             for (let file of files) {
                 const text = await readFile(file);
                 
-                // Get the first line (headers)
-                const firstLine = text.split(/\r?\n/)[0];
+                const lines = text.split(/\r?\n/);
+                const firstLine = lines[0];
                 if (!firstLine) continue;
 
                 // Split by comma
-                const headers = firstLine.split(',');
+                const headers = parseCSVRow(firstLine);
 
                 let fields = {
-                    referral: { found: false, header: null },
-                    email: { found: false, header: null },
-                    phone: { found: false, header: null },
-                    college: { found: false, header: null }
+                    referral: { index: -1, header: null, found: false, isLegacy: false },
+                    email: { index: -1, header: null, found: false },
+                    phone: { index: -1, header: null, found: false },
+                    college: { index: -1, header: null, found: false }
                 };
 
-                    const legacyFormats = [
-                        'referralCode',
-                        'ReferralCode',
-                        'Referral Code',
-                        'referral_code',
-                        'referral_code_optional',
-                        'referal_code_optional'
-                    ];
+                const legacyFormats = [
+                    'referralCode',
+                    'ReferralCode',
+                    'Referral Code',
+                    'referral_code',
+                    'referral_code_optional',
+                    'referal_code_optional'
+                ];
 
-                for (let header of headers) {
-                    let unquoted = header.replace(/^"|"$/g, '').trim();
+                let nameIndex = -1;
+
+                for (let i = 0; i < headers.length; i++) {
+                    let unquoted = headers[i];
                     let norm = unquoted.toLowerCase().replace(/[^a-z0-9]/g, '');
                     
                     if (!fields.referral.found) {
                         if (legacyFormats.includes(unquoted)) {
                             fields.referral.found = true;
+                            fields.referral.index = i;
                             fields.referral.header = unquoted;
                             fields.referral.isLegacy = true;
                         } else if (norm.includes('refer') && norm.includes('code')) {
                             fields.referral.found = true;
+                            fields.referral.index = i;
                             fields.referral.header = unquoted;
                             fields.referral.isLegacy = false;
                         }
                     }
                     if (!fields.email.found && norm.includes('email')) {
                         fields.email.found = true;
+                        fields.email.index = i;
                         fields.email.header = unquoted;
                     }
                     if (!fields.phone.found && (norm.includes('phone') || norm.includes('mobile') || norm.includes('contact') || norm.includes('whatsapp'))) {
                         fields.phone.found = true;
+                        fields.phone.index = i;
                         fields.phone.header = unquoted;
                     }
                     if (!fields.college.found && (norm.includes('college') || norm.includes('institute') || norm.includes('university'))) {
                         fields.college.found = true;
+                        fields.college.index = i;
                         fields.college.header = unquoted;
+                    }
+                    if (nameIndex === -1 && (norm === 'name' || norm === 'fullname' || norm === 'firstname')) {
+                        nameIndex = i;
                     }
                 }
 
                 if (fields.referral.found && fields.email.found && fields.phone.found && fields.college.found) {
-                    foundFiles.push({ name: file.name, fields, isLegacyFormat: fields.referral.isLegacy });
+                    let invalidEntries = [];
+
+                    // Scan every row for oddly formatted referral codes
+                    for (let r = 1; r < lines.length; r++) {
+                        if (!lines[r].trim()) continue;
+                        let rowVals = parseCSVRow(lines[r]);
+                        let refCode = rowVals[fields.referral.index] || '';
+                        
+                        // Ignore purely blank cells, but if it has +91, spaces, or isn't strictly 10 digits => flag it
+                        if (refCode && !/^\d{10}$/.test(refCode)) {
+                            let personName = nameIndex !== -1 ? (rowVals[nameIndex] || 'Unknown') : 'Unknown';
+                            invalidEntries.push({ rowNumber: r + 1, name: personName, code: refCode });
+                        }
+                    }
+
+                    foundFiles.push({ name: file.name, fields, isLegacyFormat: fields.referral.isLegacy, invalidEntries });
                 } else {
                     missingFiles.push({ name: file.name, fields });
                 }
@@ -187,38 +227,51 @@
             }
 
             if (foundFiles.length > 0) {
+                // Formatting helper for invalid entries
+                const formatInvalids = (invalids) => {
+                    if (invalids.length === 0) return `<div style="margin-top: 8px; color: #2e7d32; font-size: 0.85em;">✨ All codes in this file are strictly 10 digits!</div>`;
+                    return `<div style="margin-top: 8px; background: #ffebee; border-left: 3px solid #f44336; padding: 8px; font-size: 0.85em; border-radius: 4px;">
+                        <strong style="color: #c62828;">⚠️ Malformed Codes Found (${invalids.length}):</strong>
+                        <ul style="margin: 4px 0 0 0; padding-left: 20px; color: #b71c1c;">
+                            ${invalids.map(inv => `<li>Row ${inv.rowNumber} - <strong>${inv.name}</strong> entered: <code>"${inv.code}"</code></li>`).join('')}
+                        </ul>
+                    </div>`;
+                };
+
                 // Separate into flawless original matches vs successfully fuzzy fixed matches
                 const legacyMatches = foundFiles.filter(f => f.isLegacyFormat);
                 const fuzzyMatches = foundFiles.filter(f => !f.isLegacyFormat);
 
                 if (fuzzyMatches.length > 0) {
-                    html += `<h3>⚠️ Fuzzy Matched Files (${fuzzyMatches.length}) - <em>These would have failed previously!</em></h3>`;
+                    html += `<h3>⚠️ Fuzzy Matched Header Files (${fuzzyMatches.length}) - <em>Header format was bad</em></h3>`;
                     html += '<ul class="list-group">' + fuzzyMatches.map(f => 
-                        `<li class="found" style="background-color: #fff8e1; border-color: #ffe082 !important;">
-                            <span class="badge" style="color: #f57f17;">⚠️</span> 
-                            <strong>${f.name}</strong> &nbsp; &mdash; &nbsp; 
-                            <span style="color:#666; font-size: 0.9em;">
-                                [Referral: <strong style="color:red;">"${f.fields.referral.header}"</strong>]
-                                [Email: "${f.fields.email.header}"]
-                                [Phone: "${f.fields.phone.header}"]
-                                [College: "${f.fields.college.header}"]
-                            </span>
+                        `<li class="found" style="background-color: #fff8e1; border-color: #ffe082 !important; display: block;">
+                            <div style="display: flex; align-items: center;">
+                                <span class="badge" style="color: #f57f17;">⚠️</span> 
+                                <strong>${f.name}</strong> &nbsp; &mdash; &nbsp; 
+                                <span style="color:#666; font-size: 0.9em;">
+                                    [Referral: <strong style="color:red;">"${f.fields.referral.header}"</strong>]
+                                    [Email: "${f.fields.email.header}"]
+                                </span>
+                            </div>
+                            ${formatInvalids(f.invalidEntries)}
                         </li>`
                     ).join('') + '</ul>';
                 }
 
                 if (legacyMatches.length > 0) {
-                    html += `<h3>✅ Format-Compliant Files (${legacyMatches.length})</h3>`;
+                    html += `<h3>✅ Format-Compliant Header Files (${legacyMatches.length})</h3>`;
                     html += '<ul class="list-group">' + legacyMatches.map(f => 
-                        `<li class="found">
-                            <span class="badge">✔</span> 
-                            <strong>${f.name}</strong> &nbsp; &mdash; &nbsp; 
-                            <span style="color:#666; font-size: 0.9em;">
-                                [Referral: "${f.fields.referral.header}"]
-                                [Email: "${f.fields.email.header}"]
-                                [Phone: "${f.fields.phone.header}"]
-                                [College: "${f.fields.college.header}"]
-                            </span>
+                        `<li class="found" style="display: block;">
+                            <div style="display: flex; align-items: center;">
+                                <span class="badge">✔</span> 
+                                <strong>${f.name}</strong> &nbsp; &mdash; &nbsp; 
+                                <span style="color:#666; font-size: 0.9em;">
+                                    [Referral: "${f.fields.referral.header}"]
+                                    [Phone: "${f.fields.phone.header}"]
+                                </span>
+                            </div>
+                            ${formatInvalids(f.invalidEntries)}
                         </li>`
                     ).join('') + '</ul>';
                 }

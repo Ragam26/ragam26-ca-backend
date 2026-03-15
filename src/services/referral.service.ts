@@ -67,7 +67,11 @@ export async function processReferralCSVs(files: any[]) {
     const referralCodes = newRecords
       .map(record => getRecordValue(record, 'referral'))
       .filter(Boolean)
-      .map(code => String(code).trim());
+      .map(code => {
+        let clean = String(code).replace(/\D/g, ''); // strip spaces, +, -, (, )
+        if (clean.length === 12 && clean.startsWith('91')) clean = clean.slice(2);
+        return clean;
+      });
 
 
     const uniqueReferralCodes = [...new Set(referralCodes)];
@@ -95,7 +99,10 @@ export async function processReferralCSVs(files: any[]) {
 
       if (!referralCodeRaw) continue;
 
-      const referralCode = String(referralCodeRaw).trim();
+      let referralCode = String(referralCodeRaw).replace(/\D/g, '');
+      if (referralCode.length === 12 && referralCode.startsWith('91')) {
+        referralCode = referralCode.slice(2);
+      }
 
       if (!validReferralSet.has(referralCode)) {
         console.log(`Skipping invalid referral code: ${referralCode}`);
