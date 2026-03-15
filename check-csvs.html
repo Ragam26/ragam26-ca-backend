@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Referral Code Checker</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 40px; 
+            background-color: #f9f9fc;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h2 { margin-top: 0; color: #1a1a2e; }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #fafafa;
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            font-size: 16px;
+        }
+        .btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn:hover { background: #4338ca; }
+        .results { margin-top: 20px; }
+        .list-group {
+            list-style: none;
+            padding: 0;
+        }
+        .list-group li {
+            padding: 12px 16px;
+            border: 1px solid #eee;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+        }
+        .missing { 
+            background-color: #fff0f0; 
+            border-color: #ffcdd2 !important;
+            color: #d32f2f;
+        }
+        .found { 
+            background-color: #f0fff4; 
+            border-color: #c8e6c9 !important;
+            color: #2e7d32;
+        }
+        .badge {
+            margin-right: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔍 CSV Referral Column Checker</h2>
+        <p>Select all your workshop CSV files at once. This runs entirely in your browser and instantly tells you which ones are missing the "Referral Code" field.</p>
+        
+        <div class="upload-area">
+            <input type="file" id="fileInput" multiple accept=".csv" />
+        </div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Processing ' + files.length + ' files...</p>';
+            
+            let missingFiles = [];
+            let foundFiles = [];
+
+            // A helper to read file as text wrapped in a Promise
+            const readFile = (file) => new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                // Only read the first 2KB to be lightning fast for giant CSVs
+                const blob = file.slice(0, 2048);
+                reader.readAsText(blob);
+            });
+
+            for (let file of files) {
+                const text = await readFile(file);
+                
+                // Get the first line (headers)
+                const firstLine = text.split(/\r?\n/)[0];
+                if (!firstLine) continue;
+
+                // Split by comma
+                const headers = firstLine.split(',');
+
+                let fields = {
+                    referral: { found: false, header: null },
+                    email: { found: false, header: null },
+                    phone: { found: false, header: null },
+                    college: { found: false, header: null }
+                };
+
+                    const legacyFormats = [
+                        'referralCode',
+                        'ReferralCode',
+                        'Referral Code',
+                        'referral_code',
+                        'referral_code_optional',
+                        'referal_code_optional'
+                    ];
+
+                for (let header of headers) {
+                    let unquoted = header.replace(/^"|"$/g, '').trim();
+                    let norm = unquoted.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    
+                    if (!fields.referral.found) {
+                        if (legacyFormats.includes(unquoted)) {
+                            fields.referral.found = true;
+                            fields.referral.header = unquoted;
+                            fields.referral.isLegacy = true;
+                        } else if (norm.includes('refer') && norm.includes('code')) {
+                            fields.referral.found = true;
+                            fields.referral.header = unquoted;
+                            fields.referral.isLegacy = false;
+                        }
+                    }
+                    if (!fields.email.found && norm.includes('email')) {
+                        fields.email.found = true;
+                        fields.email.header = unquoted;
+                    }
+                    if (!fields.phone.found && (norm.includes('phone') || norm.includes('mobile') || norm.includes('contact') || norm.includes('whatsapp'))) {
+                        fields.phone.found = true;
+                        fields.phone.header = unquoted;
+                    }
+                    if (!fields.college.found && (norm.includes('college') || norm.includes('institute') || norm.includes('university'))) {
+                        fields.college.found = true;
+                        fields.college.header = unquoted;
+                    }
+                }
+
+                if (fields.referral.found && fields.email.found && fields.phone.found && fields.college.found) {
+                    foundFiles.push({ name: file.name, fields, isLegacyFormat: fields.referral.isLegacy });
+                } else {
+                    missingFiles.push({ name: file.name, fields });
+                }
+            }
+
+            // Output results
+            let html = '';
+            
+            if (missingFiles.length > 0) {
+                html += `<h3>🚨 Missing One or More Columns (${missingFiles.length})</h3>`;
+                html += '<ul class="list-group">' + missingFiles.map(f => {
+                    let missingTxt = [];
+                    if (!f.fields.referral.found) missingTxt.push('Referral Code');
+                    if (!f.fields.email.found) missingTxt.push('Email');
+                    if (!f.fields.phone.found) missingTxt.push('Phone Number');
+                    if (!f.fields.college.found) missingTxt.push('College');
+
+                    return `<li class="missing">
+                        <span class="badge">✖</span> 
+                        <strong>${f.name}</strong> &nbsp; &mdash; &nbsp; 
+                        <span style="color:#d32f2f; font-weight: bold;">Missing: ${missingTxt.join(', ')}</span>
+                    </li>`;
+                }).join('') + '</ul>';
+            } else {
+                html += `<h3>✅ All Good! All files have the Referral, Email, Phone, and College fields.</h3>`;
+            }
+
+            if (foundFiles.length > 0) {
+                // Separate into flawless original matches vs successfully fuzzy fixed matches
+                const legacyMatches = foundFiles.filter(f => f.isLegacyFormat);
+                const fuzzyMatches = foundFiles.filter(f => !f.isLegacyFormat);
+
+                if (fuzzyMatches.length > 0) {
+                    html += `<h3>⚠️ Fuzzy Matched Files (${fuzzyMatches.length}) - <em>These would have failed previously!</em></h3>`;
+                    html += '<ul class="list-group">' + fuzzyMatches.map(f => 
+                        `<li class="found" style="background-color: #fff8e1; border-color: #ffe082 !important;">
+                            <span class="badge" style="color: #f57f17;">⚠️</span> 
+                            <strong>${f.name}</strong> &nbsp; &mdash; &nbsp; 
+                            <span style="color:#666; font-size: 0.9em;">
+                                [Referral: <strong style="color:red;">"${f.fields.referral.header}"</strong>]
+                                [Email: "${f.fields.email.header}"]
+                                [Phone: "${f.fields.phone.header}"]
+                                [College: "${f.fields.college.header}"]
+                            </span>
+                        </li>`
+                    ).join('') + '</ul>';
+                }
+
+                if (legacyMatches.length > 0) {
+                    html += `<h3>✅ Format-Compliant Files (${legacyMatches.length})</h3>`;
+                    html += '<ul class="list-group">' + legacyMatches.map(f => 
+                        `<li class="found">
+                            <span class="badge">✔</span> 
+                            <strong>${f.name}</strong> &nbsp; &mdash; &nbsp; 
+                            <span style="color:#666; font-size: 0.9em;">
+                                [Referral: "${f.fields.referral.header}"]
+                                [Email: "${f.fields.email.header}"]
+                                [Phone: "${f.fields.phone.header}"]
+                                [College: "${f.fields.college.header}"]
+                            </span>
+                        </li>`
+                    ).join('') + '</ul>';
+                }
+            }
+
+            resultsDiv.innerHTML = html;
+        });
+    </script>
+</body>
+</html>

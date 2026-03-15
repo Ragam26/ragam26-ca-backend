@@ -37,3 +37,6 @@ pids
 ref
 /prisma/src/generated/prisma
 public/
+
+#sql dumps
+*.sql
