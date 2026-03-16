@@ -3,6 +3,34 @@ import { parse } from "csv-parse/sync";
 
 const prisma = new PrismaClient();
 
+function getRecordValue(record: any, field: 'name' | 'college' | 'referral'): any {
+  for (const key in record) {
+    const norm = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (field === 'name' && (norm === 'name' || norm === 'fullname' || norm === 'firstname')) {
+      return record[key];
+    }
+    if (field === 'college' && (norm.includes('college') || norm.includes('institute') || norm.includes('university'))) {
+      return record[key];
+    }
+    if (field === 'referral' && norm.includes('refer') && norm.includes('code')) {
+      return record[key];
+    }
+  }
+
+  // Fallback explicitly to the original hardcoded record keys just in case
+  if (field === 'referral') {
+    return record.referralCode ||
+           record.ReferralCode ||
+           record['Referral Code'] ||
+           record['referral_code'] ||
+           record['referral_code_optional'] ||
+           record['referal_code_optional'] || record['referral_codeoptional'] || record['referralcodeoptional'] || record['referalcodeoptional'] || null;
+  }
+
+  return null;
+}
+
 /**
  * Processes CSV files provided as buffers (from memory storage).
  * Each file name (without extension) is treated as the eventName.
@@ -37,16 +65,13 @@ export async function processReferralCSVs(files: any[]) {
     //------Processing the CSV file------
 
     const referralCodes = newRecords
-      .map(record =>
-        record.referralCode ||
-        record.ReferralCode ||
-        record['Referral Code'] ||
-        record['referral_code'] ||
-        record['referral_code_optional'] ||
-        record['referal_code_optional']
-      )
+      .map(record => getRecordValue(record, 'referral'))
       .filter(Boolean)
-      .map(code => String(code).trim());
+      .map(code => {
+        let clean = String(code).replace(/\D/g, ''); // strip spaces, +, -, (, )
+        if (clean.length === 12 && clean.startsWith('91')) clean = clean.slice(2);
+        return clean;
+      });
 
 
     const uniqueReferralCodes = [...new Set(referralCodes)];
@@ -68,28 +93,16 @@ export async function processReferralCSVs(files: any[]) {
 
     for (const record of newRecords) {
 
-      const name =
-        record.name ||
-        record.Name ||
-        record['Full Name'];
-
-      const collegeName =
-        record.collegeName ||
-        record.College ||
-        record['College Name'] ||
-        record['college_name'];
-
-      const referralCodeRaw =
-        record.referralCode ||
-        record.ReferralCode ||
-        record['Referral Code'] ||
-        record['referral_code'] ||
-        record['referral_code_optional'] ||
-        record['referal_code_optional'];
+      const name = getRecordValue(record, 'name');
+      const collegeName = getRecordValue(record, 'college');
+      const referralCodeRaw = getRecordValue(record, 'referral');
 
       if (!referralCodeRaw) continue;
 
-      const referralCode = String(referralCodeRaw).trim();
+      let referralCode = String(referralCodeRaw).replace(/\D/g, '');
+      if (referralCode.length === 12 && referralCode.startsWith('91')) {
+        referralCode = referralCode.slice(2);
+      }
 
       if (!validReferralSet.has(referralCode)) {
         console.log(`Skipping invalid referral code: ${referralCode}`);

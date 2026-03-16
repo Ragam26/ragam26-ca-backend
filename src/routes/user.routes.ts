@@ -23,7 +23,7 @@ const ProfileUpdateSchema = z.object({
     collegeName: z.string().optional(),
     yearOfStudy: z.number().int().min(1).max(6).optional(),
     district: z.string().optional(),
-    gPayNumber: z.string().regex(/^\d{10}$/, "GPay number must be 10 digits").optional(),
+    gPayNumber: z.string().regex(/^\d{10}$/, "GPay number must be 10 digits").or(z.literal("")).optional(),
 })
 
 type ProfileUpdateInput = z.infer<typeof ProfileUpdateSchema>;

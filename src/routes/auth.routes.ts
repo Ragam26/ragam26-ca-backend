@@ -62,8 +62,7 @@ authRouter.get(
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days,
-                domain: process.env.NODE_ENV === 'production' ? '.ragam.co.in' : `${process.env.BACKEND_URL}`,
-
+                domain: process.env.NODE_ENV === 'production' ? '.ragam.co.in' : undefined,
             });
 
             return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${authtoken}`);
@@ -167,6 +166,7 @@ authRouter.post("/logout", async (req: Request, res: Response) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
+            domain: process.env.NODE_ENV === 'production' ? '.ragam.co.in' : undefined,
         });
 
         console.debug('User logged out, refresh token invalidated');
@@ -179,7 +179,7 @@ authRouter.post("/logout", async (req: Request, res: Response) => {
 });
 
 authRouter.post("/verify", authenticator, (req: Request, res: Response) => {
-    
+
     res.json({
         message: "Verification Successful",
         user: {
