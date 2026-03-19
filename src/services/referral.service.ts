@@ -4,6 +4,8 @@ import { parse } from "csv-parse/sync";
 const prisma = new PrismaClient();
 
 function getRecordValue(record: any, field: 'name' | 'college' | 'referral'): any {
+  let referralCandidate = null;
+
   for (const key in record) {
     const norm = key.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -13,14 +15,21 @@ function getRecordValue(record: any, field: 'name' | 'college' | 'referral'): an
     if (field === 'college' && (norm.includes('college') || norm.includes('institute') || norm.includes('university'))) {
       return record[key];
     }
-    if (field === 'referral' && norm.includes('refer') && norm.includes('code')) {
-      return record[key];
+
+    if (field === 'referral') {
+      if (norm.includes('coupon')) {
+        return record[key];
+      }
+      if (norm.includes('refer') && norm.includes('code') && !referralCandidate) {
+        referralCandidate = record[key];
+      }
     }
   }
 
   // Fallback explicitly to the original hardcoded record keys just in case
   if (field === 'referral') {
-    return record.referralCode ||
+    return referralCandidate ||
+           record.referralCode ||
            record.ReferralCode ||
            record['Referral Code'] ||
            record['referral_code'] ||
