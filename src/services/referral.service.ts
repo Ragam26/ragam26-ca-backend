@@ -18,7 +18,8 @@ function getRecordValue(record: any, field: 'name' | 'college' | 'referral'): an
 
     if (field === 'referral') {
       if (norm.includes('coupon')) {
-        return record[key];
+        const val = record[key];
+        if (val && String(val).trim()) return val;
       }
       if (norm.includes('refer') && norm.includes('code') && !referralCandidate) {
         referralCandidate = record[key];
