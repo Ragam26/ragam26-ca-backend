@@ -67,8 +67,17 @@ export async function processReferralCSVs(files: any[]) {
     const startIndex = metadata?.lastProcessedLine || 0;
     const newRecords = records.slice(startIndex);
 
+    // Get max referralId BEFORE insertion
+    const maxRefBefore = await prisma.referral.aggregate({ _max: { referralId: true } });
+    const startMaxId = maxRefBefore._max.referralId || 0;
+
+    console.log(`\n[${fileName}] >>> PROCESSING START`);
+    console.log(`[${fileName}] Current Metadata Line: ${startIndex}`);
+    console.log(`[${fileName}] Current Max Referral ID: ${startMaxId}`);
+
     if (newRecords.length === 0) {
-      console.log(`No new records for file: ${fileName}`);
+      console.log(`[${fileName}] No new records to process.`);
+      console.log(`[${fileName}] <<< PROCESSING END (Skipped)\n`);
       continue;
     }
 
@@ -139,15 +148,20 @@ export async function processReferralCSVs(files: any[]) {
       });
     }
 
-    console.log(`Inserted ${referralsToInsert.length} valid referrals`);
+    const maxRefAfter = await prisma.referral.aggregate({ _max: { referralId: true } });
+    const endMaxId = maxRefAfter._max.referralId || 0;
+
+    console.log(`[${fileName}] Inserted ${referralsToInsert.length} valid referrals`);
+    console.log(`[${fileName}] New Max Referral ID: ${endMaxId}`);
 
     // Update metadata with the new count
+    console.log(`[${fileName}] Updating Metadata: ${startIndex} -> ${records.length}`);
     await prisma.processingMetadata.upsert({
       where: { fileName: fileName },
       update: { lastProcessedLine: records.length, updatedAt: new Date() },
       create: { fileName: fileName, lastProcessedLine: records.length, updatedAt: new Date() }
     });
 
-    console.log(`Successfully processed memory-buffer file: ${fileName}`);
+    console.log(`[${fileName}] <<< PROCESSING SUCCESS\n`);
   }
 }
