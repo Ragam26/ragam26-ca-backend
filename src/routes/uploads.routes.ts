@@ -172,7 +172,7 @@ uploadsRouter.get("/", authenticator, async (req: Request, res: Response) => {
 
 const updateUploadStatusSchema = z.object({
   status: z.enum(["approved", "rejected"]),
-  points: z.coerce.number().min(-1).default(-1),
+  points: z.coerce.number().default(-1),
 })
 
 uploadsRouter.put("/:uploadId", authenticator, async (req: Request, res: Response) => {

@@ -165,4 +165,44 @@ adminRouter.post("/upload-csv", fileUpload(), authenticator, async (req: Request
 
 
 
+// adminRouter.get("/referral-search", authenticator, async (req: Request, res: Response) => {
+//     if (!req.user || req.user.role !== "admin") {
+//         return res.status(403).send('Forbidden');
+//     }
+
+//     const { code } = req.query;
+//     if (!code || typeof code !== 'string') {
+//         return res.status(400).json({ error: "Code (phone number) is required" });
+//     }
+
+//     let cleanCode = code.replace(/\D/g, '');
+//     if (cleanCode.length === 12 && cleanCode.startsWith('91')) {
+//         cleanCode = cleanCode.slice(2);
+//     }
+
+//     try {
+//         const referrals = await prisma.referral.findMany({
+//             where: { referralCode: cleanCode },
+//             select: {
+//                 referralId: true,
+//                 name: true,
+//                 collegeName: true,
+//                 eventName: true,
+//                 isPaid: true,
+//                 registeredAt: true
+//             },
+//             orderBy: { registeredAt: 'desc' }
+//         });
+
+//         res.json({
+//             code: cleanCode,
+//             count: referrals.length,
+//             results: referrals
+//         });
+//     } catch (error) {
+//         console.error('Error searching referrals in DB:', error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     }
+// });
+
 export default adminRouter;
