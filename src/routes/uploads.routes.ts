@@ -172,7 +172,7 @@ uploadsRouter.get("/", authenticator, async (req: Request, res: Response) => {
 
 const updateUploadStatusSchema = z.object({
   status: z.enum(["approved", "rejected"]),
-  points: z.coerce.number().default(-1),
+  points: z.coerce.number(),
 })
 
 uploadsRouter.put("/:uploadId", authenticator, async (req: Request, res: Response) => {
@@ -205,8 +205,8 @@ uploadsRouter.put("/:uploadId", authenticator, async (req: Request, res: Respons
     const oldPath = upload.filePath;
 
     if (newStatus === "approved") {
-      if (parsedBody.data.points < 0) {
-        return res.status(400).send({ msg: "Points must be provided and non-negative when approving an upload" });
+      if (typeof parsedBody.data.points !== "number" || isNaN(parsedBody.data.points)) {
+        return res.status(400).send({ msg: "Invalid points value" });
       }
       const newPath = path.join(newDir, path.basename(oldPath));
       await rename(path.join(process.cwd(), oldPath), path.join(process.cwd(), newPath));
